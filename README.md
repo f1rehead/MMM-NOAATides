@@ -1,6 +1,6 @@
 # MMM-NOAATides
 
-This an extension for the [MagicMirror](https://github.com/MichMich/MagicMirror).
+This an extension for the [MagicMirror<sup>2</sup>](https://github.com/MagicMirrorOrg/MagicMirror).
 
 ![Alt text](Capture.PNG?raw=true "MMM-NOAATides screenshot")
 
@@ -8,7 +8,7 @@ The module graphs low and high tide predictions for a given tide stations, and m
 
 ## Dependencies
 
-* An installation of [MagicMirror<sup>2</sup>](https://github.com/MichMich/MagicMirror)
+* An installation of [MagicMirror<sup>2</sup>](https://github.com/MagicMirrorOrg/MagicMirror)
 * Packages: `chartjs` & `node-fetch`, both loaded via npm install
 
 ## Installation
@@ -27,7 +27,7 @@ The module graphs low and high tide predictions for a given tide stations, and m
           datum: "MSL", // "mean sea level"
           time: "lst_ldt", // local standard time/ daylight time
           units: "english", // or "metric"
-        }
+        },
       }
     ```
 
@@ -40,7 +40,7 @@ The following properties can be configured:
 | `stationID` | **REQUIRED** | The ID number of the NOAA tide station you want to graph. You can find your local tide station, and the code you want [here](https://tidesandcurrents.noaa.gov/map/index.html). https://tidesandcurrents.noaa.gov/map/
 | `datum` | OPTIONAL | The selected is "[mean sea level](https://tidesandcurrents.noaa.gov/datum_options.html)." You probably want to stick to that option.
 | `time` | OPTIONAL | Local standard time/ daylight time -- other options available, but you don't want them...
-| `units` | OPTIONAL | This defaults to whatever your Magic Mirror units are set to be. The only reason to use is to switch to `metric` tide-heights.
+| `units` | OPTIONAL | This defaults to whatever your MagicMirror<sup>2</sup> units are set to be. The only reason to use is to switch to `metric` tide-heights.
 | `language` | OPTIONAL | Sorry, I didn't do anything with this yet...
 | --- | --- | --- |
 | `chartJS.animationDuration` | OPTIONAL | milliseconds to expand datapoints away from zero on the X axis, every rendering
@@ -53,3 +53,12 @@ The following properties can be configured:
 | `chartJS.predicted.borderColor` | OPTIONAL | Graph color options [read more](https://www.chartjs.org/docs/latest/general/colors.html)
 | `chartJS.predicted.pointBorderColor` | OPTIONAL | Graph color options [read more](https://www.chartjs.org/docs/latest/general/colors.html)
 | `chartJS.predicted.pointBackgroundColor` | OPTIONAL | Graph color options [read more](https://www.chartjs.org/docs/latest/general/colors.html)
+
+## Update
+To update the module to the latest version:
+
+```
+cd ~/MagicMirror/modules/MMM-NOAATides
+git pull
+npm install
+```

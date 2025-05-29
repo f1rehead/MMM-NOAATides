@@ -1,7 +1,7 @@
 {
   "name": "MMM-NOAATides",
   "version": "1.0.0",
-  "description": "MagicMirror2 Module to graphically present tide predictions for given NOAA tide station.",
+  "description": "MagicMirror² Module to graphically present tide predictions for given NOAA tide station.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/crice009/MMM-NOAATides"

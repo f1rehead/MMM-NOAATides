@@ -1,4 +1,4 @@
-/* Magic Mirror
+/* MagicMirror²
  * Node Helper: MMM-NOAATides
  *
  * By Corey Rice - Gracious help from Sam Detweiler & Karsten13 (on MM Discord)
@@ -17,17 +17,17 @@ module.exports = NodeHelper.create({
         predicted_tides: [], //an empty array to be filled in below
     },
     // Subclass start method.
-    start: function() {
+    start: function () {
         console.log("Started node_helper.js for " + this.name);
     },
 
-    socketNotificationReceived: function(notification, payload) {
+    socketNotificationReceived: function (notification, payload) {
         // console.log(payload);
         let api_urls_payload = JSON.parse(payload);
         this.NOAATidesRequest(api_urls_payload);
     },
 
-    NOAATidesRequest: function(API_URLs) {
+    NOAATidesRequest: function (API_URLs) {
         var self = this;
 
         fetch(API_URLs.measured) //get the tides from NOAA
@@ -66,7 +66,7 @@ module.exports = NodeHelper.create({
      *  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \
      * /    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \
      */ //==== process the JSON from NOAA ===============================================================================
-    processMeasuredTidesData: function(mTides) {
+    processMeasuredTidesData: function (mTides) {
         var self = this;
         self._NOAA.station_name = mTides.metadata.name; //update the (above) NOAA object's station_name to a real name
 
@@ -79,7 +79,7 @@ module.exports = NodeHelper.create({
         })
     },
 
-    processPredictedTidesData: function(pTides) {
+    processPredictedTidesData: function (pTides) {
         var self = this;
 
         self._NOAA.predicted_times = []; //reset the data

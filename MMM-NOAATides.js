@@ -1,6 +1,6 @@
 /* global Module */
 
-/* Magic Mirror
+/* MagicMirror²
  * Module: MMM-NOAATides
  *
  * By Corey Rice - Gracious help from Sam Detweiler & Karsten13 (on MM Discord)
