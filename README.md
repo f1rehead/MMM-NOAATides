@@ -41,6 +41,7 @@ The following properties can be configured:
 | `datum` | OPTIONAL | The selected is "[mean sea level](https://tidesandcurrents.noaa.gov/datum_options.html)." You probably want to stick to that option.
 | `time` | OPTIONAL | Local standard time/ daylight time -- other options available, but you don't want them...
 | `units` | OPTIONAL | This defaults to whatever your MagicMirror<sup>2</sup> units are set to be. The only reason to use is to switch to `metric` tide-heights.
+| `showHeader` | OPTIONAL | Default `false`. Whether or not to show the module header.
 | `language` | OPTIONAL | Sorry, I didn't do anything with this yet...
 | --- | --- | --- |
 | `chartJS.animationDuration` | OPTIONAL | milliseconds to expand datapoints away from zero on the X axis, every rendering

@@ -32,6 +32,7 @@ Module.register('MMM-NOAATides', {
     datum: "MSL",
     time: "lst_ldt",
     units: "english",
+    showHeader: false,
     updateInterval: 2500,
     animationSpeed: 1000 * 60 * 6,
     initialLoadDelay: 2500,
@@ -67,6 +68,10 @@ Module.register('MMM-NOAATides', {
     setInterval(function () {
       self.getNewTides();
     }, this.config.animationSpeed);
+  },
+
+  getHeader: function () {
+    return this.config.showHeader ? "Tides " + this.NOAA.station_name : "";
   },
 
   getNewTides: function () {
