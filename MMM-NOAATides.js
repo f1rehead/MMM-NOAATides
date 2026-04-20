@@ -84,7 +84,11 @@ Module.register('MMM-NOAATides', {
     this.APIparams.predicted = `${this.config.apiBase}${NOAA_today}&end_date=${NOAA_today}&station=${this.config.stationID}&product=predictions&datum=${this.config.datum}&time_zone=${this.config.time}&units=${this.NOAA.units}&format=json`;
     this.APIparams.measured = `${this.config.apiBase}${NOAA_today}&end_date=${NOAA_today}&station=${this.config.stationID}&product=water_level&datum=${this.config.datum}&time_zone=${this.config.time}&units=${this.NOAA.units}&format=json`;
 
-    var request_params = JSON.stringify(this.APIparams);
+    var request_params = JSON.stringify({
+      predicted: this.APIparams.predicted,
+      measured: this.APIparams.measured,
+      identifier: this.identifier
+    });
     this.sendSocketNotification('START', request_params);
     this.updateDom();
   },
@@ -111,7 +115,8 @@ Module.register('MMM-NOAATides', {
     chart.id = "NOAATideChart";
     this.NOAA.chart.context = chart.getContext('2d');
 
-    if (this.NOAA.predicted_times.length > 0) {
+    var predictedTimes = this.NOAA.predicted_times;
+    if (predictedTimes && predictedTimes.length > 0) {
       this.drawChart();
     } else {
       chart.innerHTML = "Loading";
@@ -136,12 +141,15 @@ Module.register('MMM-NOAATides', {
   socketNotificationReceived: function (notification, payload) {
     if (notification === "NOAA_TIDES_RESULT") {
       var helper_NOAA = JSON.parse(payload);
+      if (helper_NOAA.identifier !== this.identifier) {
+        return;
+      }
       Log.log(this.name + " module received notification from node_helper about: " + helper_NOAA.station_name);
-      this.NOAA.station_name = helper_NOAA.station_name;
-      this.NOAA.measured_times = helper_NOAA.measured_times;
-      this.NOAA.measured_tides = helper_NOAA.measured_tides;
-      this.NOAA.predicted_times = helper_NOAA.predicted_times;
-      this.NOAA.predicted_tides = helper_NOAA.predicted_tides;
+      this.NOAA.station_name = helper_NOAA.station_name || "";
+      this.NOAA.measured_times = helper_NOAA.measured_times || [];
+      this.NOAA.measured_tides = helper_NOAA.measured_tides || [];
+      this.NOAA.predicted_times = helper_NOAA.predicted_times || [];
+      this.NOAA.predicted_tides = helper_NOAA.predicted_tides || [];
 
       this.updateDom();
     }
@@ -149,23 +157,33 @@ Module.register('MMM-NOAATides', {
 
   drawChart: function () {
     // Convert times to Date objects and pair with tide data
-    const measuredData = this.NOAA.measured_times.map(function (time, index) {
-      return {
-        x: new Date(time),
-        y: this.NOAA.measured_tides[index]
-      };
-    }.bind(this));
+    var measuredTimes = this.NOAA.measured_times || [];
+    var measuredTides = this.NOAA.measured_tides || [];
+    var predictedTimes = this.NOAA.predicted_times || [];
+    var predictedTides = this.NOAA.predicted_tides || [];
 
-    const predictedData = this.NOAA.predicted_times.map(function (time, index) {
+    const measuredData = measuredTimes.map(function (time, index) {
       return {
         x: new Date(time),
-        y: this.NOAA.predicted_tides[index]
+        y: measuredTides[index]
       };
-    }.bind(this));
+    });
+
+    const predictedData = predictedTimes.map(function (time, index) {
+      return {
+        x: new Date(time),
+        y: predictedTides[index]
+      };
+    });
 
     const currentTime = new Date(); // Current time as Date object
 
     // No need to register the plugin in Chart.js 2.x
+
+    var existingChart = this.NOAA.chart.content;
+    if (existingChart && typeof existingChart.destroy === "function") {
+      existingChart.destroy();
+    }
 
     this.NOAA.chart.content = new Chart(this.NOAA.chart.context, {
       type: 'line',

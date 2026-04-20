@@ -9,90 +9,93 @@ var NodeHelper = require("node_helper");
 var fetch = require("node-fetch");
 
 module.exports = NodeHelper.create({
-    _NOAA: {
-        station_name: "", //use the station ID number temporarily
-        measured_times: [], //an empty array to be filled in below
-        measured_tides: [], //an empty array to be filled in below
-        predicted_times: [], //an empty array to be filled in below
-        predicted_tides: [], //an empty array to be filled in below
-    },
     // Subclass start method.
     start: function () {
         console.log("Started node_helper.js for " + this.name);
     },
 
     socketNotificationReceived: function (notification, payload) {
-        // console.log(payload);
-        let api_urls_payload = JSON.parse(payload);
-        this.NOAATidesRequest(api_urls_payload);
+        var request = JSON.parse(payload);
+        this.NOAATidesRequest(request);
     },
 
-    NOAATidesRequest: function (API_URLs) {
+    NOAATidesRequest: function (request) {
         var self = this;
+        var identifier = request.identifier;
 
-        fetch(API_URLs.measured) //get the tides from NOAA
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Predicted tides NOAA API response was not ok');
-                }
-                //console.log(response); //only uncomment this if you are checking for data returned by NOAA/ trying to see the format -- still in JSON format
-                return response;
+        var noaa = {
+            station_name: "",
+            measured_times: [],
+            measured_tides: [],
+            predicted_times: [],
+            predicted_tides: []
+        };
+
+        var fetchMeasured = function () {
+            return fetch(request.measured)
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('Measured water level NOAA API response was not ok — check API URL or parameters');
+                    }
+                    return response.json();
+                })
+                .then(function (data) {
+                    self.processMeasuredTidesData(data, noaa);
+                });
+        };
+
+        var fetchPredicted = function () {
+            return fetch(request.predicted)
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('Predicted tides NOAA API response was not ok! -- Check API URL or parameters');
+                    }
+                    return response.json();
+                })
+                .then(function (data) {
+                    self.processPredictedTidesData(data, noaa);
+                });
+        };
+
+        Promise.all([fetchMeasured(), fetchPredicted()])
+            .then(function () {
+                noaa.identifier = identifier;
+                var string_NOAA = JSON.stringify(noaa);
+                self.sendSocketNotification('NOAA_TIDES_RESULT', string_NOAA);
             })
-            .then(response => response.json())
-            .then(data => self.processMeasuredTidesData(data))
-            .catch((error) => {
-                console.error('Error:', error);
+            .catch(function (error) {
+                console.error('MMM-NOAATides NOAA request error:', error);
             });
-
-        fetch(API_URLs.predicted) //get the tides from NOAA
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Predicted tides NOAA API response was not ok! -- Check API URL or parameters');
-                }
-                // console.log(response); //only uncomment this if you are checking for data returned by NOAA/ trying to see the format -- still in JSON format
-                return response;
-            })
-            .then(response => response.json())
-            .then(data => self.processPredictedTidesData(data))
-            .catch((error) => {
-                console.error('Error:', error);
-            });
-
-        let string_NOAA = JSON.stringify(self._NOAA);
-        self.sendSocketNotification('NOAA_TIDES_RESULT', string_NOAA);
     },
 
     /*   /\    /\    /\    /\    /\    /\    /\    /\    /\    /\    /\    /\    /\    /\    /\    /\    /\    /\    /\
      *  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \  /  \
      * /    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \/    \
      */ //==== process the JSON from NOAA ===============================================================================
-    processMeasuredTidesData: function (mTides) {
-        var self = this;
-        self._NOAA.station_name = mTides.metadata.name; //update the (above) NOAA object's station_name to a real name
+    processMeasuredTidesData: function (mTides, noaa) {
+        noaa.station_name = mTides.metadata.name; //update the NOAA object's station_name to a real name
 
-        self._NOAA.measured_times = []; //reset the data
-        self._NOAA.measured_tides = []; //reset the data
+        noaa.measured_times = []; //reset the data
+        noaa.measured_tides = []; //reset the data
 
-        mTides.data.forEach(element => { //for each row of data obtained, parse out the times & heights
-            self._NOAA.measured_times.push(new Date(element.t)); //store the times as time objects
-            self._NOAA.measured_tides.push(Number(element.v)); //store the heights as numbers
-        })
+        mTides.data.forEach(function (element) { //for each row of data obtained, parse out the times & heights
+            noaa.measured_times.push(new Date(element.t)); //store the times as time objects
+            noaa.measured_tides.push(Number(element.v)); //store the heights as numbers
+        });
     },
 
-    processPredictedTidesData: function (pTides) {
-        var self = this;
+    processPredictedTidesData: function (pTides, noaa) {
+        noaa.predicted_times = []; //reset the data
+        noaa.predicted_tides = []; //reset the data
 
-        self._NOAA.predicted_times = []; //reset the data
-        self._NOAA.predicted_tides = []; //reset the data
-
-        pTides.predictions.forEach(element => { //for each row of data obtained, parse out the times & heights
-            self._NOAA.predicted_times.push(new Date(element.t)); //store the times as time objects
-            self._NOAA.predicted_tides.push(Number(element.v)); //store the heights as numbers
-        })
+        pTides.predictions.forEach(function (element) { //for each row of data obtained, parse out the times & heights
+            noaa.predicted_times.push(new Date(element.t)); //store the times as time objects
+            noaa.predicted_tides.push(Number(element.v)); //store the heights as numbers
+        });
 
         //only predicted tides need the end of the day added -- they always cover the 24hrs
-        let t = new Date();
-        let endOfDay = new Date(t.getFullYear(), t.getMonth(), t.getDate(), 23, 59, 59);
-        self._NOAA.predicted_times.push(endOfDay);
+        var t = new Date();
+        var endOfDay = new Date(t.getFullYear(), t.getMonth(), t.getDate(), 23, 59, 59);
+        noaa.predicted_times.push(endOfDay);
     },
 });
