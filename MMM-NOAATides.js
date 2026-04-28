@@ -189,7 +189,7 @@ Module.register('MMM-NOAATides', {
       type: 'line',
       data: {
         datasets: [{
-          label: "Tides:" + this.NOAA.station_name, //just an empty part of the chart
+          label: showHeader ? "": "Tides:" + this.NOAA.station_name, // Don't show the label if the header is shown
           data: '',
         }, {
           label: 'Measured',
