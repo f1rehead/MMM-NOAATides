@@ -10,7 +10,8 @@
 Module.register('MMM-NOAATides', {
   APIparams: {
     predicted: "",
-    measured: ""
+    measured: "",
+    hilo: ""
   },
   NOAA: {
     station_name: "",
@@ -19,11 +20,14 @@ Module.register('MMM-NOAATides', {
     measured_tides: [],
     predicted_times: [],
     predicted_tides: [],
+    hilo_events: [],
     chart: {
       context: "",
       content: ""
     }
   },
+
+  nextTidesDomId: "",
 
   config: null,
 
@@ -61,6 +65,7 @@ Module.register('MMM-NOAATides', {
     Log.log(this.name + " is starting!");
 
     this.NOAA.units = this.config.units === "metric" ? "metric" : "english";
+    this.nextTidesDomId = "MMM-NOAATides-next-" + String(this.identifier || "0").replace(/\W/g, "-");
     this.getNewTides();
     this.scheduleUpdate(this.config.initialLoadDelay);
 
@@ -68,6 +73,10 @@ Module.register('MMM-NOAATides', {
     setInterval(function () {
       self.getNewTides();
     }, this.config.animationSpeed);
+
+    setInterval(function () {
+      self.refreshNextTidesDisplay();
+    }, 30000);
   },
 
   getHeader: function () {
@@ -81,12 +90,19 @@ Module.register('MMM-NOAATides', {
     let date = String(today.getDate()).padStart(2, "0");
     const NOAA_today = year + month + date;
 
+    const tomorrowDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+    const NOAA_tomorrow = String(tomorrowDate.getFullYear())
+      + String(tomorrowDate.getMonth() + 1).padStart(2, "0")
+      + String(tomorrowDate.getDate()).padStart(2, "0");
+
     this.APIparams.predicted = `${this.config.apiBase}${NOAA_today}&end_date=${NOAA_today}&station=${this.config.stationID}&product=predictions&datum=${this.config.datum}&time_zone=${this.config.time}&units=${this.NOAA.units}&format=json`;
     this.APIparams.measured = `${this.config.apiBase}${NOAA_today}&end_date=${NOAA_today}&station=${this.config.stationID}&product=water_level&datum=${this.config.datum}&time_zone=${this.config.time}&units=${this.NOAA.units}&format=json`;
+    this.APIparams.hilo = `${this.config.apiBase}${NOAA_today}&end_date=${NOAA_tomorrow}&station=${this.config.stationID}&product=predictions&interval=hilo&datum=${this.config.datum}&time_zone=${this.config.time}&units=${this.NOAA.units}&format=json`;
 
     var request_params = JSON.stringify({
       predicted: this.APIparams.predicted,
       measured: this.APIparams.measured,
+      hilo: this.APIparams.hilo,
       identifier: this.identifier
     });
     this.sendSocketNotification('START', request_params);
@@ -123,7 +139,93 @@ Module.register('MMM-NOAATides', {
     }
 
     wrapper.appendChild(chart);
+
+    var nextLine = document.createElement("div");
+    nextLine.className = "MMM-NOAATides-next-line bright";
+    nextLine.id = this.nextTidesDomId;
+    nextLine.innerHTML = this.buildNextTidesHtml();
+    wrapper.appendChild(nextLine);
+
     return wrapper;
+  },
+
+  parseNOAATimestamp: function (t) {
+    if (!t) {
+      return null;
+    }
+    var d = new Date(String(t).replace(" ", "T"));
+    return isNaN(d.getTime()) ? null : d;
+  },
+
+  getNextNotableTidesUpcoming: function (count) {
+    var limit = typeof count === "number" ? count : 2;
+    var events = this.NOAA.hilo_events || [];
+    var now = Date.now();
+
+    var items = [];
+    var i = 0;
+    for (; i < events.length; i++) {
+      var ev = events[i];
+      var when = this.parseNOAATimestamp(ev.t);
+      if (!when) {
+        continue;
+      }
+      items.push({ when: when, hl: ev.hl });
+    }
+
+    items.sort(function (a, b) {
+      return a.when.getTime() - b.when.getTime();
+    });
+
+    items = items.filter(function (it) {
+      return it.when.getTime() > now;
+    });
+
+    return items.slice(0, limit);
+  },
+
+  formatTideClock: function (d) {
+    return d.toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true
+    });
+  },
+
+  buildNextTidesHtml: function () {
+    var upcoming = this.getNextNotableTidesUpcoming(2);
+    var labelCls = "MMM-NOAATides-next-label dimmed";
+    var partsHtml = "";
+
+    var j = 0;
+    for (; j < upcoming.length; j++) {
+      var piece = upcoming[j];
+      var word = piece.hl === "high" ? "High" : "Low";
+      var timeStr = this.formatTideClock(piece.when);
+      var pieceCls = "MMM-NOAATides-next-tide" + (j > 0 ? " MMM-NOAATides-next-tide-shift" : "");
+      partsHtml += '<span class="' + pieceCls + '">' + word + " " + timeStr + "</span>";
+    }
+
+    var empty = upcoming.length === 0;
+    var body = empty
+      ? '<span class="MMM-NOAATides-next-placeholder dimmed">—</span>'
+      : '<span class="MMM-NOAATides-next-tides">' + partsHtml + "</span>";
+
+    return (
+      '<span class="' + labelCls + '">Next:</span> ' +
+      body
+    );
+  },
+
+  refreshNextTidesDisplay: function () {
+    if (typeof document === "undefined") {
+      return;
+    }
+    var el = document.getElementById(this.nextTidesDomId);
+    if (!el) {
+      return;
+    }
+    el.innerHTML = this.buildNextTidesHtml();
   },
 
   scheduleUpdate: function (delay) {
@@ -150,6 +252,7 @@ Module.register('MMM-NOAATides', {
       this.NOAA.measured_tides = helper_NOAA.measured_tides || [];
       this.NOAA.predicted_times = helper_NOAA.predicted_times || [];
       this.NOAA.predicted_tides = helper_NOAA.predicted_tides || [];
+      this.NOAA.hilo_events = helper_NOAA.hilo_events || [];
 
       this.updateDom();
     }
@@ -189,7 +292,7 @@ Module.register('MMM-NOAATides', {
       type: 'line',
       data: {
         datasets: [{
-          label: showHeader ? "": "Tides:" + this.NOAA.station_name, // Don't show the label if the header is shown
+          label: this.config.showHeader ? "" : "Tides:" + this.NOAA.station_name, // hide dataset label when module header shows
           data: '',
         }, {
           label: 'Measured',

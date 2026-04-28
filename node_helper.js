@@ -28,7 +28,8 @@ module.exports = NodeHelper.create({
             measured_times: [],
             measured_tides: [],
             predicted_times: [],
-            predicted_tides: []
+            predicted_tides: [],
+            hilo_events: []
         };
 
         var fetchMeasured = function () {
@@ -57,7 +58,20 @@ module.exports = NodeHelper.create({
                 });
         };
 
-        Promise.all([fetchMeasured(), fetchPredicted()])
+        var fetchHilo = function () {
+            return fetch(request.hilo)
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('High/Low NOAA API response was not ok — check API URL or parameters');
+                    }
+                    return response.json();
+                })
+                .then(function (data) {
+                    self.processHiloPredictionsData(data, noaa);
+                });
+        };
+
+        Promise.all([fetchMeasured(), fetchPredicted(), fetchHilo()])
             .then(function () {
                 noaa.identifier = identifier;
                 var string_NOAA = JSON.stringify(noaa);
@@ -97,5 +111,20 @@ module.exports = NodeHelper.create({
         var t = new Date();
         var endOfDay = new Date(t.getFullYear(), t.getMonth(), t.getDate(), 23, 59, 59);
         noaa.predicted_times.push(endOfDay);
+    },
+
+    processHiloPredictionsData: function (pTides, noaa) {
+        noaa.hilo_events = [];
+        if (!pTides.predictions || !Array.isArray(pTides.predictions)) {
+            return;
+        }
+        pTides.predictions.forEach(function (row) {
+            var typ = (row.type !== undefined && row.type !== null ? String(row.type) : "").toUpperCase();
+            var hl = typ === "H" ? "high" : (typ === "L" ? "low" : null);
+            if (!hl || !row.t) {
+                return;
+            }
+            noaa.hilo_events.push({ t: row.t, hl: hl });
+        });
     },
 });

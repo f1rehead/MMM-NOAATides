@@ -28,3 +28,23 @@
 .MMM-NOAATides .large {
     max-width: 90vw;
 }
+
+.MMM-NOAATides .MMM-NOAATides-next-line {
+    line-height: 1.35em;
+    font-size: calc(var(--font-size) * 0.75);
+    margin-top: 0.4em;
+    text-align: center;
+    width: 100%;
+}
+
+.MMM-NOAATides .MMM-NOAATides-next-tides {
+    display: inline;
+}
+
+.MMM-NOAATides .MMM-NOAATides-next-tide-shift {
+    padding-left: 0.65em;
+}
+
+.MMM-NOAATides .MMM-NOAATides-next-placeholder {
+    opacity: 0.6;
+}
